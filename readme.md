@@ -42,5 +42,5 @@ You can set the following environment variables. Alternatively, you can pass the
       }, // ONLY if environment variables not set
     })
 
-    // delete old image
+    // Delete old image
     await deleteImage({ file: user.image }) // Key is extracted automatically
