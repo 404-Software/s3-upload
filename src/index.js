@@ -10,8 +10,16 @@ const S3_UPLOAD_KEEP_ORIGINAL_URL =
 const S3_UPLOAD_KEEP_ORIGINAL_FILENAME =
 	process.env.S3_UPLOAD_KEEP_ORIGINAL_FILENAME === 'true'
 
-function getFileKey(key) {
-	const split = key.split('.com/')
+const S3_UPLOAD_ACCESS_KEY_ID =
+	process.env.S3_UPLOAD_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID
+const S3_UPLOAD_SECRET_ACCESS_KEY =
+	process.env.S3_UPLOAD_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY
+
+function getFileKey(key, config) {
+	const url = getUrl(config?.url)
+	const splitBy = url ? `${url}/` : 'amazonaws.com/'
+
+	const split = key.split(splitBy)
 
 	return split.length === 2 ? split[1] : key
 }
@@ -56,6 +64,18 @@ function getKeepOriginalFilename(keepOriginalFilename) {
 	return clientKeepOriginalFilename
 }
 
+function getCredentials(credentials) {
+	const clientCredentials =
+		S3_UPLOAD_ACCESS_KEY_ID && S3_UPLOAD_SECRET_ACCESS_KEY
+			? {
+					accessKeyId: S3_UPLOAD_ACCESS_KEY_ID,
+					secretAccessKey: S3_UPLOAD_SECRET_ACCESS_KEY,
+			  }
+			: credentials
+
+	return clientCredentials
+}
+
 async function createUploadStream({
 	createReadStream,
 	filename,
@@ -70,13 +90,13 @@ async function createUploadStream({
 	const keepOriginalFilename = getKeepOriginalFilename(
 		config?.keepOriginalFilename,
 	)
+	const credentials = getCredentials(config?.credentials)
+	const fileExtension = getExtension(filename)
 
 	const passThroughStream = new stream.PassThrough()
 
-	const fileExtension = getExtension(filename)
-
 	const upload = new Upload({
-		client: new S3Client({ region }),
+		client: new S3Client({ region, credentials }),
 		params: {
 			Bucket: bucket,
 			Key: `${folder ? `${folder}/` : ''}${
@@ -91,19 +111,13 @@ async function createUploadStream({
 
 	createReadStream().pipe(passThroughStream)
 
-	const uploaded = await upload.done()
+	const file = await upload.done()
 
 	return {
 		Location:
 			!url || keepOriginalUrl
-				? uploaded.Location.replace(
-						`${bucket}.s3.${region}.amazonaws.com`,
-						`s3.${region}.amazonaws.com/${bucket}`,
-				  )
-				: uploaded.Location.replace(
-						`${bucket}.s3.${region}.amazonaws.com`,
-						url,
-				  ),
+				? file.Location
+				: file.Location.replace(`${bucket}.s3.${region}.amazonaws.com`, url),
 	}
 }
 
@@ -143,13 +157,18 @@ const uploadFiles = async ({ files, folder, config }) =>
 	)
 
 const deleteFile = async ({ file, config }) => {
+	const region = getRegion(config?.region)
+	const credentials = getCredentials(config?.credentials)
+	const bucket = getBucket(config?.bucket)
+	const key = getFileKey(file, config)
+
 	if (typeof file !== 'string') return
 
-	const client = new S3Client({ region: getRegion(config?.region) })
+	const client = new S3Client({ region, credentials })
 
 	const command = new DeleteObjectCommand({
-		Bucket: getBucket(config?.bucket),
-		Key: getFileKey(file),
+		Bucket: bucket,
+		Key: key,
 	})
 
 	await client.send(command)

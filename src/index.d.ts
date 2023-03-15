@@ -2,6 +2,10 @@ export type S3UploadConfig = {
 	region?: string
 	bucket?: string
 	url?: string
+	credentials?: {
+		secretAccessKey: string
+		accessKeyId: string
+	}
 	keepOriginalFilename?: boolean
 	keepOriginalUrl?: boolean
 }
@@ -58,7 +62,7 @@ declare module '@404-software/s3-upload' {
 		data: S3UploadUploadFiles,
 	): Promise<string[]>
 
-	export declare function deleteFile(data: S3UploadDeleteFile): Promise<string>
+	export declare function deleteFile(data: S3UploadDeleteFile): Promise<void>
 
 	export declare function deleteFiles(data: S3UploadDeleteFiles): Promise<void>
 }

@@ -1,6 +1,6 @@
 {
 	"name": "@404-software/s3-upload",
-	"version": "1.0.13",
+	"version": "1.0.18",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/404-Software/s3-upload.git"
