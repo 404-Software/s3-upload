@@ -2,7 +2,7 @@
 
 This package makes uploading files to S3 very simple by providing helper functions
 
-<br/><br/>
+<br/>
 
 # How to use
 
@@ -22,7 +22,7 @@ S3_UPLOAD_ACCESS_KEY_ID="AWS_SECRET" || AWS_ACCESS_KEY_ID="AWS_SECRET"
 S3_UPLOAD_SECRET_ACCESS_KEY="AWS_KEY" || AWS_SECRET_ACCESS_KEY="AWS_KEY"
 ```
 
-<br/><br/>
+<br/>
 
 # Examples
 
