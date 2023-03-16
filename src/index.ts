@@ -4,7 +4,7 @@ import { Upload } from '@aws-sdk/lib-storage'
 import fs from 'fs'
 import stream from 'stream'
 
-const S3_UPLOAD_BUCKET = process.env.S3_UPLOAD_BUCKET
+const S3_UPLOAD_BUCKET = process.env.S3_UPLOAD_BUCKET || process.env.AWS_BUCKET
 const S3_UPLOAD_REGION = process.env.S3_UPLOAD_REGION
 const S3_UPLOAD_URL = process.env.S3_UPLOAD_URL
 const S3_UPLOAD_KEEP_ORIGINAL_URL =
