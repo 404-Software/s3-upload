@@ -1,6 +1,8 @@
-const { DeleteObjectCommand, S3Client } = require('@aws-sdk/client-s3')
-const { Upload } = require('@aws-sdk/lib-storage')
-const stream = require('stream')
+import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { randomUUID } from 'crypto'
+import { Upload } from '@aws-sdk/lib-storage'
+import fs from 'fs'
+import stream from 'stream'
 
 const S3_UPLOAD_BUCKET = process.env.S3_UPLOAD_BUCKET
 const S3_UPLOAD_REGION = process.env.S3_UPLOAD_REGION
@@ -15,20 +17,32 @@ const S3_UPLOAD_ACCESS_KEY_ID =
 const S3_UPLOAD_SECRET_ACCESS_KEY =
 	process.env.S3_UPLOAD_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY
 
-function getFileKey(key, config) {
-	const url = getUrl(config?.url)
-	const splitBy = url ? `${url}/` : 'amazonaws.com/'
-
-	const split = key.split(splitBy)
-
-	return split.length === 2 ? split[1] : key
+export interface S3UploadConfig {
+	region?: string
+	bucket?: string
+	url?: string
+	credentials?: {
+		secretAccessKey: string
+		accessKeyId: string
+	}
+	keepOriginalFilename?: boolean
+	keepOriginalUrl?: boolean
 }
 
-function getExtension(filename) {
+function getFileKey(key: string, config?: S3UploadConfig) {
+	const url = getUrl(config?.url)
+
+	const split1 = key.split(url ? `${url}/` : 'THISIHSIHSDIHSIDHSIHDSIHSHD')
+	const split2 = key.split('amazonaws.com/')
+
+	return split1.length === 2 ? split1[1] : split2.length === 2 ? split2[1] : key
+}
+
+function getExtension(filename: string) {
 	return `.${filename.split('.').pop()}`
 }
 
-function getRegion(region) {
+function getRegion(region?: string) {
 	const clientRegion = S3_UPLOAD_REGION || region
 
 	if (!clientRegion) throw new Error('No region provided as env var or config')
@@ -36,7 +50,7 @@ function getRegion(region) {
 	return clientRegion
 }
 
-function getBucket(bucket) {
+function getBucket(bucket?: string) {
 	const clientBucket = S3_UPLOAD_BUCKET || bucket
 
 	if (!clientBucket) throw new Error('No bucket provided as env var or config')
@@ -44,27 +58,26 @@ function getBucket(bucket) {
 	return clientBucket
 }
 
-function getUrl(url) {
+function getUrl(url?: string) {
 	const clientUrl = S3_UPLOAD_URL || url
 
 	return clientUrl
 }
 
-function getKeepOriginalUrl(keepOriginalUrl) {
-	const clientKeepOriginalUrl =
-		S3_UPLOAD_KEEP_ORIGINAL_URL === 'true' || keepOriginalUrl
+function getKeepOriginalUrl(keepOriginalUrl?: boolean) {
+	const clientKeepOriginalUrl = S3_UPLOAD_KEEP_ORIGINAL_URL || keepOriginalUrl
 
 	return clientKeepOriginalUrl
 }
 
-function getKeepOriginalFilename(keepOriginalFilename) {
+function getKeepOriginalFilename(keepOriginalFilename?: boolean) {
 	const clientKeepOriginalFilename =
-		S3_UPLOAD_KEEP_ORIGINAL_FILENAME === 'true' || keepOriginalFilename
+		S3_UPLOAD_KEEP_ORIGINAL_FILENAME || keepOriginalFilename
 
 	return clientKeepOriginalFilename
 }
 
-function getCredentials(credentials) {
+function getCredentials(credentials?: S3UploadConfig['credentials']) {
 	const clientCredentials =
 		S3_UPLOAD_ACCESS_KEY_ID && S3_UPLOAD_SECRET_ACCESS_KEY
 			? {
@@ -76,13 +89,26 @@ function getCredentials(credentials) {
 	return clientCredentials
 }
 
+export interface S3UploadCreateUploadStream {
+	createReadStream: () => fs.ReadStream
+	filename: string
+	mimetype: string
+	folder?: string
+	config?: S3UploadConfig
+}
+
+type S3UploadUploadDone = {
+	Location: string
+	Key: string
+}
+
 async function createUploadStream({
 	createReadStream,
 	filename,
 	mimetype,
 	folder,
 	config,
-}) {
+}: S3UploadCreateUploadStream) {
 	const url = getUrl(config?.url)
 	const bucket = getBucket(config?.bucket)
 	const region = getRegion(config?.region)
@@ -100,7 +126,7 @@ async function createUploadStream({
 		params: {
 			Bucket: bucket,
 			Key: `${folder ? `${folder}/` : ''}${
-				keepOriginalFilename ? filename : `${Date.now()}${fileExtension}`
+				keepOriginalFilename ? filename : `${randomUUID()}${fileExtension}`
 			}`,
 			Body: passThroughStream,
 			ACL: 'public-read',
@@ -111,7 +137,7 @@ async function createUploadStream({
 
 	createReadStream().pipe(passThroughStream)
 
-	const file = await upload.done()
+	const file = (await upload.done()) as S3UploadUploadDone
 
 	return {
 		Location:
@@ -121,7 +147,27 @@ async function createUploadStream({
 	}
 }
 
-const uploadFile = async ({ file, folder, config }) => {
+export type S3UploadFile =
+	| {
+			file: {
+				createReadStream: () => fs.ReadStream
+				filename: string
+				mimetype: string
+			}
+	  }
+	| string
+
+export interface S3UploadUploadFile {
+	file: S3UploadFile
+	folder?: string
+	config?: S3UploadConfig
+}
+
+export const uploadFile = async ({
+	file,
+	folder,
+	config,
+}: S3UploadUploadFile) => {
 	if (typeof file === 'string') return file
 
 	const { createReadStream, filename, mimetype } = file.file
@@ -137,32 +183,37 @@ const uploadFile = async ({ file, folder, config }) => {
 	return Location
 }
 
-const uploadFiles = async ({ files, folder, config }) =>
+export interface S3UploadUploadFiles {
+	files: Array<string | S3UploadFile>
+	folder?: string
+	config?: S3UploadConfig
+}
+
+export const uploadFiles = async ({
+	files,
+	folder,
+	config,
+}: S3UploadUploadFiles) =>
 	await Promise.all(
 		files.map(async file => {
 			if (typeof file === 'string') return file
 
-			const { createReadStream, filename, mimetype } = file.file
-
-			return new Promise((resolve, reject) =>
-				createUploadStream({
-					createReadStream,
-					folder,
-					filename,
-					mimetype,
-					config,
-				}).then(({ Location }) => (Location ? resolve(Location) : reject())),
-			)
+			return await uploadFile({ file, folder, config })
 		}),
 	)
 
-const deleteFile = async ({ file, config }) => {
+export interface S3UploadDeleteFile {
+	file?: string
+	config?: S3UploadConfig
+}
+
+export const deleteFile = async ({ file, config }: S3UploadDeleteFile) => {
+	if (typeof file !== 'string') return
+
 	const region = getRegion(config?.region)
 	const credentials = getCredentials(config?.credentials)
 	const bucket = getBucket(config?.bucket)
 	const key = getFileKey(file, config)
-
-	if (typeof file !== 'string') return
 
 	const client = new S3Client({ region, credentials })
 
@@ -174,7 +225,12 @@ const deleteFile = async ({ file, config }) => {
 	await client.send(command)
 }
 
-const deleteFiles = async ({ files, config }) => {
+export interface S3UploadDeleteFiles {
+	files?: string[]
+	config?: S3UploadConfig
+}
+
+export const deleteFiles = async ({ files, config }: S3UploadDeleteFiles) => {
 	if (!files) return
 
 	await Promise.all(
@@ -184,11 +240,4 @@ const deleteFiles = async ({ files, config }) => {
 			await deleteFile({ file, config })
 		}),
 	)
-}
-
-module.exports = {
-	uploadFile,
-	uploadFiles,
-	deleteFile,
-	deleteFiles,
 }

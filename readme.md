@@ -15,7 +15,6 @@ You can set the following environment variables. Alternatively, you can pass the
     S3_UPLOAD_KEEP_ORIGINAL_FILENAME="true|false"
 
     S3_UPLOAD_ACCESS_KEY_ID || AWS_ACCESS_KEY_ID="AWS_SECRET"
-
     S3_UPLOAD_SECRET_ACCESS_KEY || AWS_SECRET_ACCESS_KEY="AWS_KEY"
 
 <br/><br/>
@@ -43,4 +42,4 @@ You can set the following environment variables. Alternatively, you can pass the
     })
 
     // Delete old image
-    await deleteImage({ file: user.image }) // Key is extracted automatically
+    await deleteImage({ file: user.image }) // Key is extracted automatically from URL
