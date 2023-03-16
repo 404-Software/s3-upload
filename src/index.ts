@@ -32,7 +32,7 @@ export interface S3UploadConfig {
 function getFileKey(key: string, config?: S3UploadConfig) {
 	const url = getUrl(config?.url)
 
-	const split1 = key.split(url ? `${url}/` : 'THISIHSIHSDIHSIDHSIHDSIHSHD')
+	const split1 = url ? key.split(`${url}/`) : []
 	const split2 = key.split('amazonaws.com/')
 
 	return split1.length === 2 ? split1[1] : split2.length === 2 ? split2[1] : key
