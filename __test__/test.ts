@@ -1,5 +1,5 @@
 require('dotenv').config()
-import { deleteFile, deleteFiles, uploadFile, uploadFiles } from '../lib'
+import { deleteFile, deleteFiles, uploadFile, uploadFiles } from '../src'
 import fs from 'fs'
 import path from 'path'
 
