@@ -1,2 +1,6 @@
 .env
 __test__
+src
+jestconfig.json
+tscconfig.json
+readme.md
