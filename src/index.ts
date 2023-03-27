@@ -148,12 +148,15 @@ async function createUploadStream({
 }
 
 export type S3UploadFile =
+	| Promise<{
+			createReadStream: () => fs.ReadStream
+			filename: string
+			mimetype: string
+	  }>
 	| {
-			file: {
-				createReadStream: () => fs.ReadStream
-				filename: string
-				mimetype: string
-			}
+			createReadStream: () => fs.ReadStream
+			filename: string
+			mimetype: string
 	  }
 	| string
 
@@ -170,7 +173,7 @@ export const uploadFile = async ({
 }: S3UploadUploadFile) => {
 	if (typeof file === 'string') return file
 
-	const { createReadStream, filename, mimetype } = file.file
+	const { createReadStream, filename, mimetype } = await file
 
 	const { Location } = await createUploadStream({
 		createReadStream,
