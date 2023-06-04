@@ -27,9 +27,12 @@ export interface S3UploadConfig {
 	}
 	keepOriginalFilename?: boolean
 	keepOriginalUrl?: boolean
+	extractKey?: boolean
 }
 
 function getFileKey(key: string, config?: S3UploadConfig) {
+	if (!config?.extractKey) return key
+
 	const url = getUrl(config?.url)
 
 	const split1 = url ? key.split(`${url}/`) : []

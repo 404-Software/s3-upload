@@ -15,11 +15,9 @@ describe('uploadFile', () => {
 
 		fileUrl = await uploadFile({
 			file: {
-				file: {
-					createReadStream,
-					filename,
-					mimetype,
-				},
+				createReadStream,
+				filename,
+				mimetype,
 			},
 		})
 
@@ -47,11 +45,9 @@ describe('uploadFiles', () => {
 			const mimetype = 'image/jpeg'
 
 			return {
-				file: {
-					createReadStream,
-					filename,
-					mimetype,
-				},
+				createReadStream,
+				filename,
+				mimetype,
 			}
 		})
 
